@@ -2,8 +2,9 @@ package Date::Range::Birth;
 
 use strict;
 use vars qw($VERSION);
-$VERSION = '0.01';
+$VERSION = '0.02';
 
+require Date::Range;
 use base qw(Date::Range);
 
 use Date::Calc;
@@ -33,8 +34,8 @@ sub new {
 sub _from_age {
     my($class, $age, $date) = @_;
 
-    my @start = Date::Calc::Add_Delta_YMD(_ymd($date),  - $age - 1, 0, 1);
-    my @end   = Date::Calc::Add_Delta_YMD(_ymd($date),  - $age , 0, 0);
+    my @start = Date::Calc::Add_Delta_YMD(_ymd($date),  -$age - 1, 0, 1);
+    my @end   = Date::Calc::Add_Delta_YMD(_ymd($date),  -$age, 0, 0);
 
     return Date::Simple->new(@start), Date::Simple->new(@end);
 }
@@ -45,8 +46,8 @@ sub _from_array {
     @ages == 2 or _croak("Date::Range::Birth: invalid number of args in age");
 
     # old's start to young's end
-    my @start = Date::Calc::Add_Delta_YMD(_ymd($date),  - $ages[1] - 1, 0, 1);
-    my @end   = Date::Calc::Add_Delta_YMD(_ymd($date),  - $ages[0] , 0, 0);
+    my @start = Date::Calc::Add_Delta_YMD(_ymd($date),  -$ages[1] - 1, 0, 1);
+    my @end   = Date::Calc::Add_Delta_YMD(_ymd($date),  -$ages[0], 0, 0);
 
     return Date::Simple->new(@start), Date::Simple->new(@end);
 }
@@ -99,12 +100,42 @@ who are C<$age> years old in C<$date>. Default is today (now).
 
 If the age is provided as array reference (like C<[ $young, $old ]>),
 returns range of birthday for those who are between C<$young> -
-C<$old> years old.
+C<$old> years old. It may be handy for searching teenagers, etc.
 
 =back
 
 Other methods are inherited from Date::Range. See L<Date::Range> for
 details.
+
+=head1 EXAMPLE
+
+Your customer database schema:
+
+  CREATE TABLE customer (
+      name     varchar(64) NOT NULL,
+      birthday date NOT NULL
+  );
+
+What you should do is to select name and birthday of the customers who are
+2X years old (between 20 and 29).
+
+  use DBI;
+  use Date::Range::Birth;
+
+  my $dbh = DBI->connect( ... );
+  my $range = Date::Range::Birth->new([ 20, 29 ]);
+
+  my $sth = $dbh->prepare(<<'SQL')
+  SELECT name, birthday FROM customer WHERE birthday >= ? AND birthday <= ?
+  SQL
+
+  # Date::Simple overloads to 'yyyy-mm-dd'!
+  $sth->execute($range->start, $range->end);
+
+  while (my $data = $sth->fetchrow_arrayref) {
+      print "name: $data->[0] birthday: $data->[1]\n";
+  }
+  $dbh->disconnect;
 
 =head1 AUTHOR
 

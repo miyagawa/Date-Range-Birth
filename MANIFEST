@@ -5,3 +5,4 @@ README
 lib/Date/Range/Birth.pm
 t/00_compile.t
 t/01_range.t
+t/02_fail.t
